@@ -3,13 +3,16 @@ package com.zenn889.putar.ui
 import android.net.Uri
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -19,7 +22,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -101,9 +103,11 @@ import com.zenn889.putar.ui.theme.FaintInk
 import com.zenn889.putar.ui.theme.Ink
 import com.zenn889.putar.ui.theme.MutedInk
 import com.zenn889.putar.ui.theme.Elev
+import com.zenn889.putar.ui.theme.Motion
 import com.zenn889.putar.ui.theme.Radius
 import com.zenn889.putar.ui.theme.Space
 import com.zenn889.putar.ui.theme.SurfaceHigh
+import com.zenn889.putar.ui.theme.pressScale
 
 /** Wadah progres yang berdetak — hanya konsumennya (mini & layar penuh)
  *  yang ikut recompose, bukan seluruh pohon UI. */
@@ -440,23 +444,30 @@ fun MiniPlayer(
     }
 }
 
-/** Tombol bar bawah layar pemutar: ikon dengan label kecil di bawahnya. */
+/** Tombol bar bawah layar pemutar: chip kaca dengan ikon + label kecil,
+ *  memantul pegas saat ditekan. */
 @Composable
 private fun SheetAction(
     icon: ImageVector,
     label: String,
     onClick: () -> Unit
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 6.dp)
+    val src = remember { MutableInteractionSource() }
+    Surface(
+        onClick = onClick,
+        interactionSource = src,
+        color = SurfaceHigh.copy(alpha = 0.55f),
+        shape = RoundedCornerShape(Radius.md),
+        modifier = Modifier.pressScale(src)
     ) {
-        Icon(icon, contentDescription = label, tint = FaintInk, modifier = Modifier.size(24.dp))
-        Spacer(Modifier.height(3.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MutedInk)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Icon(icon, contentDescription = label, tint = FaintInk, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.height(3.dp))
+            Text(label, style = MaterialTheme.typography.labelSmall, color = MutedInk)
+        }
     }
 }
 
@@ -500,7 +511,11 @@ fun NowPlayingSheet(
         dragHandle = null,
         scrimColor = Color.Black.copy(alpha = 0.55f)
     ) {
-        Box(Modifier.fillMaxWidth()) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(topStart = Radius.xl, topEnd = Radius.xl))
+        ) {
             // lapis 1: dasar
             Box(Modifier.matchParentSize().background(surf))
 
@@ -547,9 +562,9 @@ fun NowPlayingSheet(
                 Box(
                     modifier = Modifier
                         .padding(top = 6.dp)
-                        .size(width = 42.dp, height = 4.dp)
+                        .size(width = 56.dp, height = 4.dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.6f))
+                        .background(accent.copy(alpha = 0.55f))
                 )
 
                 // --- bar atas ---
@@ -645,14 +660,44 @@ fun NowPlayingSheet(
                                 CircleShape
                             )
                     )
-                    AlbumArt(
-                        uri = art,
-                        size = artSize,
-                        shape = RoundedCornerShape(Radius.lg),
-                        modifier = Modifier
-                            .aspectRatio(1f)
-                            .shadow(Elev.hero, RoundedCornerShape(Radius.lg), clip = false)
+                    // napas halus: artwork membesar sedikit saat lagu diputar
+                    val artScale by animateFloatAsState(
+                        targetValue = if (mirror.playing) 1f else 0.965f,
+                        animationSpec = tween(Motion.base, easing = FastOutSlowInEasing),
+                        label = "artScale"
                     )
+                    Box(
+                        modifier = Modifier
+                            .size(artSize)
+                            .scale(artScale)
+                            .shadow(
+                                Elev.hero,
+                                RoundedCornerShape(Radius.lg),
+                                clip = false,
+                                ambientColor = bright.copy(alpha = 0.30f),
+                                spotColor = bright.copy(alpha = 0.30f)
+                            )
+                            .clip(RoundedCornerShape(Radius.lg))
+                            .border(
+                                1.5.dp,
+                                Brush.linearGradient(
+                                    listOf(
+                                        bright.copy(alpha = 0.55f),
+                                        deep.copy(alpha = 0.10f),
+                                        bright.copy(alpha = 0.55f)
+                                    )
+                                ),
+                                RoundedCornerShape(Radius.lg)
+                            )
+                            .padding(4.dp)
+                    ) {
+                        AlbumArt(
+                            uri = art,
+                            size = artSize - 8.dp,
+                            shape = RoundedCornerShape(Radius.lg - 4.dp),
+                            seed = mirror.title
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(24.dp))
@@ -743,7 +788,7 @@ fun NowPlayingSheet(
                             .fillMaxWidth(frac)
                             .height(4.dp)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(accent)
+                            .background(Brush.horizontalGradient(listOf(bright, accent)))
                     )
                     Box(
                         modifier = Modifier
@@ -784,6 +829,7 @@ fun NowPlayingSheet(
                             modifier = Modifier.size(42.dp)
                         )
                     }
+                    val playSrc = remember { MutableInteractionSource() }
                     Box(
                         modifier = Modifier
                             .size(72.dp)
@@ -792,7 +838,12 @@ fun NowPlayingSheet(
                             .background(
                                 Brush.linearGradient(listOf(bright, deep))
                             )
-                            .clickable(onClick = onPlayPause),
+                            .pressScale(playSrc)
+                            .clickable(
+                                interactionSource = playSrc,
+                                indication = null,
+                                onClick = onPlayPause
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -830,21 +881,27 @@ fun NowPlayingSheet(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(14.dp))
-                            .clickable(onClick = onCycleSpeed)
-                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                    val speedSrc = remember { MutableInteractionSource() }
+                    Surface(
+                        onClick = onCycleSpeed,
+                        interactionSource = speedSrc,
+                        color = SurfaceHigh.copy(alpha = 0.55f),
+                        shape = RoundedCornerShape(Radius.md),
+                        modifier = Modifier.pressScale(speedSrc)
                     ) {
-                        Text(
-                            speedLabel,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = accent
-                        )
-                        Spacer(Modifier.height(3.dp))
-                        Text("Kecepatan", style = MaterialTheme.typography.labelSmall, color = MutedInk)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                speedLabel,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = accent
+                            )
+                            Spacer(Modifier.height(3.dp))
+                            Text("Kecepatan", style = MaterialTheme.typography.labelSmall, color = MutedInk)
+                        }
                     }
                     SheetAction(Icons.Filled.Lyrics, "Lirik", onOpenLyrics)
                     SheetAction(Icons.Filled.Equalizer, "Equalizer", onOpenEqualizer)
