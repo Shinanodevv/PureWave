@@ -23,8 +23,17 @@ jobs:
         env:
           KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
         run: |
-          echo "$KEYSTORE_B64" | base64 -d > /tmp/purewave-release.p12
-          test -s /tmp/purewave-release.p12
+          echo "$KEYSTORE_B64" | base64 -d > /tmp/purewave-release.jks
+          test -s /tmp/purewave-release.jks
+          sha256sum /tmp/purewave-release.jks
+
+      - name: Verifikasi keystore
+        env:
+          STORE_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          keytool -list -keystore /tmp/purewave-release.jks \
+            -storepass "$STORE_PASS" -alias "$KEY_ALIAS"
 
       - name: Build APK release
         env:
@@ -33,7 +42,7 @@ jobs:
           KEY_PASS: ${{ secrets.KEY_PASSWORD }}
         run: |
           ./gradlew :app:assembleRelease --no-daemon \
-            -PputarStoreFile=/tmp/purewave-release.p12 \
+            -PputarStoreFile=/tmp/purewave-release.jks \
             -PputarStorePass="$STORE_PASS" \
             -PputarKeyAlias="$KEY_ALIAS" \
             -PputarKeyPass="$KEY_PASS"
