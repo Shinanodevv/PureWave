@@ -10,6 +10,8 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v7
 
@@ -53,3 +55,31 @@ jobs:
           name: purewave-release-apk
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
+
+      - name: Buat GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view v2.25.0 >/dev/null 2>&1; then
+            echo "Rilis v2.25.0 sudah ada — lewati pembuatan."
+          else
+            cp app/build/outputs/apk/release/app-release.apk purewave-v2.25.0.apk
+            sha256sum purewave-v2.25.0.apk > purewave-v2.25.0.apk.sha256
+            cat > NOTES.md << 'EOF'
+          Layar pemutar dipoles:
+          - Artwork "bernapas": membesar halus saat lagu diputar
+          - Bingkai gradien + bayangan berwarna mengikuti warna sampul
+          - Tombol play memantul pegas saat ditekan
+          - Bar progres gradien
+          - Sudut atas sheet membulat
+          - Chip aksi (Kecepatan/Lirik/Equalizer/Antrian) jadi kaca dengan efek tekan
+
+          Catatan install: build dari fork dengan kunci tanda tangan baru.
+          Backup dulu via Setelan → Backup, uninstall versi lama/asli,
+          baru install APK ini. Update berikutnya bisa langsung timpa.
+          EOF
+            gh release create v2.25.0 \
+              --title "PureWave v2.25.0 — poles layar pemutar" \
+              --notes-file NOTES.md \
+              purewave-v2.25.0.apk purewave-v2.25.0.apk.sha256
+          fi
