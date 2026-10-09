@@ -2,6 +2,7 @@ package com.zenn889.putar.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -38,6 +40,7 @@ import com.zenn889.putar.ui.theme.FaintInk
 import com.zenn889.putar.ui.theme.Ink
 import com.zenn889.putar.ui.theme.Radius
 import com.zenn889.putar.ui.theme.Space
+import com.zenn889.putar.ui.theme.pressScale
 
 private fun fmtDurLabel(msTotal: Long): String {
     val totalMin = msTotal / 60_000L
@@ -61,6 +64,8 @@ fun HeroCard(songs: List<Track>, onShuffleAll: () -> Unit) {
     val albumCount = remember(songs) { songs.mapNotNull { it.albumId }.distinct().size }
     val artistCount = remember(songs) { songs.map { it.displayArtist }.distinct().size }
     val light = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    val cardSrc = remember { MutableInteractionSource() }
+    val shuffleSrc = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -73,7 +78,9 @@ fun HeroCard(songs: List<Track>, onShuffleAll: () -> Unit) {
                 ),
                 RoundedCornerShape(Radius.xl)
             )
-            .clickable(onClick = onShuffleAll)
+            .clip(RoundedCornerShape(Radius.xl))
+            .pressScale(cardSrc, 0.985f)
+            .clickable(interactionSource = cardSrc, indication = null, onClick = onShuffleAll)
     ) {
         Box(
             modifier = Modifier
@@ -82,6 +89,18 @@ fun HeroCard(songs: List<Track>, onShuffleAll: () -> Unit) {
                 .background(
                     Brush.radialGradient(
                         listOf(Coral.copy(alpha = 0.18f), Color.Transparent)
+                    ),
+                    CircleShape
+                )
+        )
+        Box(
+            modifier = Modifier
+                .size(190.dp)
+                .align(Alignment.BottomStart)
+                .offset(x = (-50).dp, y = 50.dp)
+                .background(
+                    Brush.radialGradient(
+                        listOf(Coral.copy(alpha = 0.13f), Color.Transparent)
                     ),
                     CircleShape
                 )
@@ -126,7 +145,13 @@ fun HeroCard(songs: List<Track>, onShuffleAll: () -> Unit) {
                         .size(56.dp)
                         .shadow(Elev.raised, CircleShape, clip = false)
                         .background(Brush.linearGradient(listOf(Coral, CoralBright)), CircleShape)
-                        .clickable(onClick = onShuffleAll),
+                        .clip(CircleShape)
+                        .pressScale(shuffleSrc)
+                        .clickable(
+                            interactionSource = shuffleSrc,
+                            indication = null,
+                            onClick = onShuffleAll
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(

@@ -232,6 +232,7 @@ fun TrackRow(
 ) {
     // U5: getaran halus pada tekan lama & geser — dulu semuanya bisu
     val haptic = LocalHapticFeedback.current
+    val rowSrc = remember { MutableInteractionSource() }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -240,7 +241,10 @@ fun TrackRow(
             .background(
                 if (isCurrent) Coral.copy(alpha = 0.16f) else Color.Transparent
             )
+            .pressScale(rowSrc, 0.99f)
             .combinedClickable(
+                interactionSource = rowSrc,
+                indication = null,
                 onClick = onClick,
                 onLongClick = onLongClick?.let { asli ->
                     {
@@ -324,6 +328,7 @@ fun MiniPlayer(
     val (deep, bright) = remember(tint) { tonalPair(tint) }
     val accent = if (dark) bright else deep
 
+    val miniPlaySrc = remember { MutableInteractionSource() }
     Surface(
         color = surf,
         shadowElevation = Elev.raised,
@@ -403,7 +408,12 @@ fun MiniPlayer(
                         .shadow(12.dp, CircleShape, clip = false)
                         .clip(CircleShape)
                         .background(Brush.linearGradient(listOf(Coral, CoralBright)))
-                        .clickable(onClick = onPlayPause),
+                        .pressScale(miniPlaySrc)
+                        .clickable(
+                            interactionSource = miniPlaySrc,
+                            indication = null,
+                            onClick = onPlayPause
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(

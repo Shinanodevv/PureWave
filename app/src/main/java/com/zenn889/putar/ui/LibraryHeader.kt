@@ -2,6 +2,7 @@ package com.zenn889.putar.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,6 +46,7 @@ import com.zenn889.putar.ui.theme.MutedInk
 import com.zenn889.putar.ui.theme.Radius
 import com.zenn889.putar.ui.theme.Space
 import com.zenn889.putar.ui.theme.SurfaceHigh
+import com.zenn889.putar.ui.theme.pressScale
 
 @Composable
 internal fun LibraryHeader(
@@ -151,10 +154,17 @@ internal fun LibraryHeader(
             item { StatChip("Favorit", rootFavs, tab == LibraryTab.FAVORIT) { onTabSelect(LibraryTab.FAVORIT) } }
             if (rootSongs > 0) {
                 item {
+                    val shuffleSrc = remember { MutableInteractionSource() }
                     Surface(
                         shape = RoundedCornerShape(Radius.pill),
                         color = Coral,
-                        modifier = Modifier.clickable(onClick = onPlayAllShuffled)
+                        modifier = Modifier
+                            .pressScale(shuffleSrc, 0.95f)
+                            .clickable(
+                                interactionSource = shuffleSrc,
+                                indication = null,
+                                onClick = onPlayAllShuffled
+                            )
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 15.dp, vertical = 9.dp),
@@ -210,10 +220,13 @@ private fun StatChip(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    val src = remember { MutableInteractionSource() }
     Surface(
         shape = RoundedCornerShape(Radius.pill),
         color = if (selected) Coral.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-        modifier = Modifier.clickable(onClick = onClick)
+        modifier = Modifier
+            .pressScale(src, 0.94f)
+            .clickable(interactionSource = src, indication = null, onClick = onClick)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = Space.lg, vertical = 9.dp),

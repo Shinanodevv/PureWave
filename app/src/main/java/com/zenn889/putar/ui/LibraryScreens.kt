@@ -46,7 +46,6 @@ import com.zenn889.putar.ui.theme.Space
 import com.zenn889.putar.ui.theme.pressScale
 import com.zenn889.putar.ui.theme.FaintInk
 import com.zenn889.putar.ui.theme.MutedInk
-import com.zenn889.putar.ui.theme.SurfaceHigh
 
 enum class LibraryTab(val label: String) {
     LAGU("Lagu"),
@@ -76,6 +75,17 @@ fun buildFolderItems(tracks: List<Track>): List<FolderItem> =
         .sortedBy { it.name.lowercase() }
 
 /* ---------- baris Album / Artis / Folder ---------- */
+
+/** Enam pasang gradien avatar artis — dipilih dari nama supaya tiap artis
+ *  punya warna sendiri dan daftar tidak monoton. */
+private val avatarGradients = listOf(
+    Color(0xFFFF744A) to Color(0xFFB22C12),
+    Color(0xFF8B5CF6) to Color(0xFF3E2A9E),
+    Color(0xFF2FBF8F) to Color(0xFF0E6B4E),
+    Color(0xFF3D8BFF) to Color(0xFF123F8F),
+    Color(0xFFE8A33D) to Color(0xFF8A4E0E),
+    Color(0xFFF45B93) to Color(0xFF8E1F4B)
+)
 
 /** Kartu album persegi untuk tab Album (kisi ala Spotify). */
 @Composable
@@ -119,6 +129,8 @@ fun AlbumCard(album: Album, onClick: () -> Unit) {
 
 @Composable
 fun ArtistRow(name: String, songCount: Int, onClick: () -> Unit) {
+    val (gTop, gBottom) =
+        avatarGradients[kotlin.math.abs(name.hashCode()) % avatarGradients.size]
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -132,7 +144,7 @@ fun ArtistRow(name: String, songCount: Int, onClick: () -> Unit) {
                 .size(48.dp)
                 .clip(CircleShape)
                 .background(
-                    Brush.verticalGradient(listOf(Color(0xFFFF744A), Color(0xFFB22C12)))
+                    Brush.verticalGradient(listOf(gTop, gBottom))
                 ),
             contentAlignment = Alignment.Center
         ) {
@@ -176,7 +188,11 @@ fun FolderRow(item: FolderItem, onClick: () -> Unit) {
             modifier = Modifier
                 .size(48.dp)
                 .clip(RoundedCornerShape(Radius.sm))
-                .background(SurfaceHigh),
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Coral.copy(alpha = 0.22f), Coral.copy(alpha = 0.07f))
+                    )
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(

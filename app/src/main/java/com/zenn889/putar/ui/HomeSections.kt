@@ -2,6 +2,7 @@ package com.zenn889.putar.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -37,11 +39,13 @@ import androidx.compose.ui.unit.dp
 import com.zenn889.putar.data.Track
 import com.zenn889.putar.data.toArtUri
 import com.zenn889.putar.ui.theme.Coral
+import com.zenn889.putar.ui.theme.CoralBright
 import com.zenn889.putar.ui.theme.FaintInk
 import com.zenn889.putar.ui.theme.Ink
 import com.zenn889.putar.ui.theme.MutedInk
 import com.zenn889.putar.ui.theme.Radius
 import com.zenn889.putar.ui.theme.Space
+import com.zenn889.putar.ui.theme.pressScale
 
 /**
  * Judul seksi beranda: batang aksen kecil + judul tebal + jumlah di kanan.
@@ -63,7 +67,11 @@ fun SectionHeader(
             modifier = Modifier
                 .size(width = 4.dp, height = 18.dp)
                 .clip(RoundedCornerShape(2.dp))
-                .background(Coral)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(CoralBright, Coral.copy(alpha = 0.30f))
+                    )
+                )
         )
         Spacer(Modifier.width(9.dp))
         Text(
@@ -149,16 +157,20 @@ fun ContinueRow(track: Track, positionMs: Long, onPlay: () -> Unit) {
                         .fillMaxWidth(frac)
                         .height(3.dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(Coral)
+                        .background(Brush.horizontalGradient(listOf(CoralBright, Coral)))
                 )
             }
         }
         Spacer(Modifier.width(Space.md))
+        val playSrc = remember { MutableInteractionSource() }
         Box(
             modifier = Modifier
                 .size(42.dp)
+                .shadow(8.dp, CircleShape, clip = false)
                 .clip(CircleShape)
-                .background(Coral),
+                .background(Brush.linearGradient(listOf(Coral, CoralBright)))
+                .pressScale(playSrc)
+                .clickable(interactionSource = playSrc, indication = null, onClick = onPlay),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -184,11 +196,16 @@ fun TrackStrip(
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp)) {
             items(tracks, key = { it.contentUri }) { track ->
                 val idx = tracks.indexOf(track)
+                val cardSrc = remember { MutableInteractionSource() }
                 Column(
                     modifier = Modifier
                         .width(148.dp)
                         .padding(end = 12.dp)
-                        .clickable { onPlay(tracks, idx) }
+                        .pressScale(cardSrc, 0.96f)
+                        .clickable(
+                            interactionSource = cardSrc,
+                            indication = null
+                        ) { onPlay(tracks, idx) }
                 ) {
                     Box {
                         AlbumArt(

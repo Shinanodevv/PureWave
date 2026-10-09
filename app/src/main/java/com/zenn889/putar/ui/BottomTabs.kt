@@ -2,6 +2,7 @@ package com.zenn889.putar.ui
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -89,6 +90,11 @@ fun PureWaveBottomBar(current: LibraryTab, onSelect: (LibraryTab) -> Unit) {
                         animationSpec = tween(Motion.quick),
                         label = "tint"
                     )
+                    val iconSize by animateDpAsState(
+                        targetValue = if (selected) 25.dp else 22.dp,
+                        animationSpec = tween(Motion.base),
+                        label = "iconSize"
+                    )
                     Row(
                         modifier = Modifier
                             .weight(1f)
@@ -104,7 +110,7 @@ fun PureWaveBottomBar(current: LibraryTab, onSelect: (LibraryTab) -> Unit) {
                             tab.icon(),
                             contentDescription = tab.label,
                             tint = tint,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(iconSize)
                         )
                         if (selected) {
                             Spacer(Modifier.width(Space.xs))
