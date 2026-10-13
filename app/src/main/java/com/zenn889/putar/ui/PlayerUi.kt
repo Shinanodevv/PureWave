@@ -1,6 +1,7 @@
 package com.zenn889.putar.ui
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -9,6 +10,10 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -676,37 +681,47 @@ fun NowPlayingSheet(
                         animationSpec = tween(Motion.base, easing = FastOutSlowInEasing),
                         label = "artScale"
                     )
-                    Box(
-                        modifier = Modifier
-                            .size(artSize)
-                            .scale(artScale)
-                            .shadow(
-                                Elev.hero,
-                                RoundedCornerShape(Radius.lg),
-                                clip = false,
-                                ambientColor = bright.copy(alpha = 0.30f),
-                                spotColor = bright.copy(alpha = 0.30f)
+                    // ganti lagu: artwork lama memudar+mengecil, yang baru muncul halus
+                    AnimatedContent(
+                        targetState = art,
+                        transitionSpec = {
+                            (fadeIn(tween(Motion.base)) + scaleIn(tween(Motion.base), initialScale = 0.92f))
+                                .togetherWith(fadeOut(tween(Motion.quick)))
+                        },
+                        label = "artwork",
+                        modifier = Modifier.scale(artScale)
+                    ) { targetArt ->
+                        Box(
+                            modifier = Modifier
+                                .size(artSize)
+                                .shadow(
+                                    Elev.hero,
+                                    RoundedCornerShape(Radius.lg),
+                                    clip = false,
+                                    ambientColor = bright.copy(alpha = 0.30f),
+                                    spotColor = bright.copy(alpha = 0.30f)
+                                )
+                                .clip(RoundedCornerShape(Radius.lg))
+                                .border(
+                                    1.5.dp,
+                                    Brush.linearGradient(
+                                        listOf(
+                                            bright.copy(alpha = 0.55f),
+                                            deep.copy(alpha = 0.10f),
+                                            bright.copy(alpha = 0.55f)
+                                        )
+                                    ),
+                                    RoundedCornerShape(Radius.lg)
+                                )
+                                .padding(4.dp)
+                        ) {
+                            AlbumArt(
+                                uri = targetArt,
+                                size = artSize - 8.dp,
+                                shape = RoundedCornerShape(Radius.lg - 4.dp),
+                                seed = mirror.title
                             )
-                            .clip(RoundedCornerShape(Radius.lg))
-                            .border(
-                                1.5.dp,
-                                Brush.linearGradient(
-                                    listOf(
-                                        bright.copy(alpha = 0.55f),
-                                        deep.copy(alpha = 0.10f),
-                                        bright.copy(alpha = 0.55f)
-                                    )
-                                ),
-                                RoundedCornerShape(Radius.lg)
-                            )
-                            .padding(4.dp)
-                    ) {
-                        AlbumArt(
-                            uri = art,
-                            size = artSize - 8.dp,
-                            shape = RoundedCornerShape(Radius.lg - 4.dp),
-                            seed = mirror.title
-                        )
+                        }
                     }
                 }
 
@@ -784,6 +799,17 @@ fun NowPlayingSheet(
                             )
                         }
                 ) {
+                    // denyut halus pada titik progres saat lagu diputar
+                    val dotBeat = rememberInfiniteTransition(label = "dotBeat")
+                    val dotPulse by dotBeat.animateFloat(
+                        initialValue = 1f,
+                        targetValue = 1.3f,
+                        animationSpec = infiniteRepeatable(
+                            tween(900, easing = FastOutSlowInEasing),
+                            RepeatMode.Reverse
+                        ),
+                        label = "dotPulse"
+                    )
                     Box(
                         modifier = Modifier
                             .align(Alignment.CenterStart)
@@ -805,6 +831,7 @@ fun NowPlayingSheet(
                             .align(Alignment.CenterStart)
                             .offset(x = (maxWidth - 13.dp) * frac)
                             .size(13.dp)
+                            .scale(if (mirror.playing) dotPulse else 1f)
                             .shadow(6.dp, CircleShape, clip = false)
                             .clip(CircleShape)
                             .background(accent)
