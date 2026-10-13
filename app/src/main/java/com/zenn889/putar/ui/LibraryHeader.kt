@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.zenn889.putar.ui.theme.Coral
+import com.zenn889.putar.ui.theme.CoralBright
 import com.zenn889.putar.ui.theme.Elev
 import com.zenn889.putar.ui.theme.FaintInk
 import com.zenn889.putar.ui.theme.Ink
@@ -95,9 +96,10 @@ internal fun LibraryHeader(
             Column(Modifier.weight(1f)) {
                 Text(
                     greeting,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Ink
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        brush = Brush.linearGradient(listOf(Ink, CoralBright))
+                    ),
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
                     "PureWave · pemutar offline",
