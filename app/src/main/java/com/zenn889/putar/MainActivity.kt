@@ -17,7 +17,14 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -68,6 +75,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.media3.common.Player
@@ -287,11 +295,12 @@ private data class ContentKey(
  * Dipasang sebagai modifier supaya tidak perlu membungkus dan menggeser
  * indentasi blok daftar yang panjang. [revealed] sengaja baru menjadi true
  * setelah satu detak, supaya animasinya jalan pada kemunculan pertama.
+ * v2.27.0: pakai pegas supaya gerakannya terasa lebih hidup dan halus.
  */
 private fun Modifier.revealOnOpen(revealed: Boolean): Modifier = composed {
     val v by animateFloatAsState(
         targetValue = if (revealed) 1f else 0f,
-        animationSpec = tween(Motion.base),
+        animationSpec = spring(dampingRatio = 0.85f, stiffness = 260f),
         label = "reveal"
     )
     graphicsLayer {
@@ -324,6 +333,17 @@ fun PlayerApp() {
     Box(Modifier.fillMaxSize()) {
 
     // latar: dasar + pendar coral tipis dari atas (biar tidak terasa datar)
+    // v2.27.0: pendarnya "bernapas" pelan supaya aplikasi terasa hidup
+    val bgBreath = rememberInfiniteTransition(label = "bgBreath")
+    val glowAlpha by bgBreath.animateFloat(
+        initialValue = 0.06f,
+        targetValue = 0.13f,
+        animationSpec = infiniteRepeatable(
+            tween(durationMillis = 3600, easing = FastOutSlowInEasing),
+            RepeatMode.Reverse
+        ),
+        label = "glowAlpha"
+    )
     Box(
         modifier = Modifier
             .matchParentSize()
@@ -334,7 +354,7 @@ fun PlayerApp() {
             .matchParentSize()
             .background(
                 Brush.verticalGradient(
-                    listOf(Coral.copy(alpha = 0.09f), Color.Transparent, Color.Transparent),
+                    listOf(Coral.copy(alpha = glowAlpha), Color.Transparent, Color.Transparent),
                     endY = 950f
                 )
             )
@@ -1019,13 +1039,15 @@ fun PlayerApp() {
                             val keluarDetail = initialState.album != null ||
                                 initialState.artist != null || initialState.folder != null
                             val durasi = tween<Float>(Motion.base)
+                            // v2.27.0: geser pakai pegas — terasa lebih halus dan hidup
+                            val pegas = spring<IntOffset>(dampingRatio = 0.9f, stiffness = 700f)
                             when {
                                 // buka detail: menggeser masuk dari kanan
-                                masukDetail -> (slideInHorizontally { it / 4 } + fadeIn(durasi))
+                                masukDetail -> (slideInHorizontally(pegas) { it / 4 } + fadeIn(durasi))
                                     .togetherWith(fadeOut(durasi))
                                 // tutup detail: menggeser keluar ke kanan
                                 keluarDetail -> fadeIn(durasi)
-                                    .togetherWith(slideOutHorizontally { it / 4 } + fadeOut(durasi))
+                                    .togetherWith(slideOutHorizontally(pegas) { it / 4 } + fadeOut(durasi))
                                 // ganti tab: cukup memudar, jangan menggeser
                                 else -> fadeIn(durasi).togetherWith(fadeOut(durasi))
                             }
