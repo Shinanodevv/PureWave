@@ -68,21 +68,19 @@ jobs:
             cp app/build/outputs/apk/release/app-release.apk "purewave-$TAG.apk"
             sha256sum "purewave-$TAG.apk" > "purewave-$TAG.apk.sha256"
             cat > NOTES.md << 'EOF'
-          Poles UI menyeluruh biar ga ngebosenin:
-          - Avatar artis kini warna-warni (6 gradien berbeda, dipilih dari nama)
-          - Semua kartu & tombol memantul pegas saat ditekan
-          - Baris lagu mengecil halus saat disentuh
-          - Ikon tab bawah membesar halus saat terpilih
-          - Kartu "Lanjutkan mendengarkan": tombol putar gradien + bar progres gradien
-          - Judul seksi & ikon folder: sentuhan gradien baru
-          - Kartu hero: pendar ganda + efek tekan
+          Animasi lebih halus & tampilan naik kelas:
+          - Artwork layar pemutar crossfade halus saat ganti lagu
+          - Transisi buka/tutup detail pakai pegas — lebih hidup
+          - Latar aplikasi "bernapas" pelan dengan pendar coral
+          - Kartu hero: kilau cahaya menyapu perlahan
+          - Sapaan di beranda kini teks gradien
+          - Titik progres berdenyut halus saat lagu diputar
 
-          Catatan install: build dari fork dengan kunci tanda tangan baru.
-          Backup dulu via Setelan → Backup, uninstall versi lama/asli,
-          baru install APK ini. Update berikutnya bisa langsung timpa.
+          Catatan install: langsung timpa versi sebelumnya, data aman
+          (tanda tangan sama seperti v2.25.0 ke atas).
           EOF
             gh release create "$TAG" \
-              --title "PureWave $TAG — poles UI" \
+              --title "PureWave $TAG — animasi & tampilan" \
               --notes-file NOTES.md \
               "purewave-$TAG.apk" "purewave-$TAG.apk.sha256"
           fi
