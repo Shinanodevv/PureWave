@@ -68,19 +68,18 @@ jobs:
             cp app/build/outputs/apk/release/app-release.apk "purewave-$TAG.apk"
             sha256sum "purewave-$TAG.apk" > "purewave-$TAG.apk.sha256"
             cat > NOTES.md << 'EOF'
-          Animasi lebih halus & tampilan naik kelas:
-          - Artwork layar pemutar crossfade halus saat ganti lagu
-          - Transisi buka/tutup detail pakai pegas — lebih hidup
-          - Latar aplikasi "bernapas" pelan dengan pendar coral
-          - Kartu hero: kilau cahaya menyapu perlahan
-          - Sapaan di beranda kini teks gradien
-          - Titik progres berdenyut halus saat lagu diputar
+          Pemutar video dibetulkan + UI makin modern:
+          - Ada indikator loading saat video buffering (tidak lagi layar hitam)
+          - Video rusak kini tampil kartu error + tombol "Coba lagi"
+          - Video dijeda otomatis saat layar mati / aplikasi ke background
+          - Lencana durasi "0:00" tidak lagi tampil kalau durasi tak diketahui
+          - Sampul mini player crossfade halus saat ganti lagu
 
           Catatan install: langsung timpa versi sebelumnya, data aman
           (tanda tangan sama seperti v2.25.0 ke atas).
           EOF
             gh release create "$TAG" \
-              --title "PureWave $TAG — animasi & tampilan" \
+              --title "PureWave $TAG — betulkan video & modernisasi UI" \
               --notes-file NOTES.md \
               "purewave-$TAG.apk" "purewave-$TAG.apk.sha256"
           fi
