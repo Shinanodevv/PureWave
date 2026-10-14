@@ -383,12 +383,22 @@ fun MiniPlayer(
                     .padding(start = 12.dp, end = 4.dp, top = 9.dp, bottom = 9.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                AlbumArt(
-                    mirror.artwork,
-                    size = 50.dp,
-                    shape = RoundedCornerShape(Radius.sm),
-                    modifier = Modifier.shadow(Elev.card, RoundedCornerShape(Radius.sm), clip = false)
-                )
+                // ganti lagu: sampul mini ikut crossfade halus
+                AnimatedContent(
+                    targetState = mirror.artwork,
+                    transitionSpec = {
+                        (fadeIn(tween(Motion.quick)) + scaleIn(tween(Motion.quick), initialScale = 0.9f))
+                            .togetherWith(fadeOut(tween(Motion.quick)))
+                    },
+                    label = "miniArt"
+                ) { targetArt ->
+                    AlbumArt(
+                        targetArt,
+                        size = 50.dp,
+                        shape = RoundedCornerShape(Radius.sm),
+                        modifier = Modifier.shadow(Elev.card, RoundedCornerShape(Radius.sm), clip = false)
+                    )
+                }
                 Spacer(Modifier.width(Space.md))
                 Column(Modifier.weight(1f)) {
                     Text(

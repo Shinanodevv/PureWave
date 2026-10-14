@@ -54,6 +54,8 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.SubtitlesOff
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -92,9 +94,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -338,18 +344,22 @@ fun VideoCard(item: VideoItem, onClick: () -> Unit) {
             } else {
                 ShimmerBox(Modifier.fillMaxSize())
             }
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(6.dp)
-                    .background(Color(0x99000000), RoundedCornerShape(Radius.xs))
-                    .padding(horizontal = 5.dp, vertical = 2.dp)
-            ) {
-                Text(
-                    fmtMs(item.durationMs),
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelSmall
-                )
+            // lencana durasi — disembunyikan kalau durasinya tidak diketahui
+            // (mis. video yang dibuka dari luar aplikasi), biar tidak tampil "0:00"
+            if (item.durationMs > 0L) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(6.dp)
+                        .background(Color(0x99000000), RoundedCornerShape(Radius.xs))
+                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        fmtMs(item.durationMs),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
             }
         }
         Spacer(Modifier.height(Space.sm))
@@ -421,6 +431,12 @@ fun VideoPlayerScreen(
     var autoNextOff by remember { mutableStateOf(false) }
     /** Kunci layar: semua sentuhan ditahan sampai dibuka. */
     var locked by remember { mutableStateOf(false) }
+    /** true saat video sedang buffering — tampil spinner, bukan layar hitam. */
+    var buffering by remember { mutableStateOf(false) }
+    /** Pesan error pemutar; null = tidak ada error (tampil kartu error). */
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+    /** Dinaikkan tiap "Coba lagi" supaya ExoPlayer dibuat ulang. */
+    var retryKey by remember { mutableIntStateOf(0) }
     val inPip by VideoPlayback.inPip
     // U5: getaran halus pada aksi penting (geser kecerahan sengaja tidak
     // digetarkan supaya tidak berdebar terus saat jari menggeser)
@@ -432,8 +448,10 @@ fun VideoPlayerScreen(
         VideoPosStore.position(context, item.contentUri.toString())
     }
 
-    DisposableEffect(item.contentUri) {
+    DisposableEffect(item.contentUri, retryKey) {
         VideoPlayback.active = true
+        errorMsg = null
+        buffering = true
         val builder = MediaItem.Builder().setUri(item.contentUri)
         if (subtitleFile != null) {
             builder.setSubtitleConfigurations(
@@ -447,6 +465,16 @@ fun VideoPlayerScreen(
             )
         }
         val player = ExoPlayer.Builder(context).build().apply {
+            addListener(object : Player.Listener {
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    buffering = playbackState == Player.STATE_BUFFERING
+                }
+
+                override fun onPlayerError(error: PlaybackException) {
+                    buffering = false
+                    errorMsg = error.message?.take(120) ?: "Kode error ${error.errorCode}"
+                }
+            })
             setMediaItem(builder.build(), resumeMs)
             setPlaybackSpeed(speed)   // kecepatan ikut terbawa saat pindah video
             prepare()
@@ -466,6 +494,21 @@ fun VideoPlayerScreen(
             VideoPlayback.active = false
             VideoPlayback.playing = false
         }
+    }
+
+    // Layar mati / aplikasi ke background tanpa PiP → video dijeda otomatis
+    // supaya tidak jalan sendiri tanpa gambar. Masuk PiP tidak memicu ON_STOP,
+    // jadi video tetap jalan di jendela kecil.
+    val lifecycleOwner = activity as? LifecycleOwner
+    DisposableEffect(lifecycleOwner) {
+        val owner = lifecycleOwner ?: return@DisposableEffect onDispose {}
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                exo?.pause()
+            }
+        }
+        owner.lifecycle.addObserver(observer)
+        onDispose { owner.lifecycle.removeObserver(observer) }
     }
 
     // kecerahan layar dikembalikan ke bawaan sistem begitu layar ini ditutup,
@@ -884,8 +927,8 @@ fun VideoPlayerScreen(
                 }
             }
 
-            // 4) play besar di tengah
-            if (!playing || ended) {
+            // 4) play besar di tengah (disembunyikan saat buffering / error)
+            if ((!playing || ended) && !buffering && errorMsg == null) {
                 val playInteraction = remember { MutableInteractionSource() }
                 Box(
                     modifier = Modifier
@@ -906,6 +949,68 @@ fun VideoPlayerScreen(
                         tint = Color.White,
                         modifier = Modifier.size(46.dp)
                     )
+                }
+            }
+
+            // 4b) indikator loading saat buffering — sebelumnya layar hitam
+            // tanpa kabar, dikira video macet
+            if (buffering && errorMsg == null && !inPip) {
+                CircularProgressIndicator(
+                    color = Coral,
+                    strokeWidth = 4.dp,
+                    modifier = Modifier
+                        .size(52.dp)
+                        .align(Alignment.Center)
+                )
+            }
+
+            // 4c) kartu error — sebelumnya video rusak macet di layar hitam
+            // tanpa kabar; sekarang ada tombol coba lagi & tutup
+            val err = errorMsg
+            if (err != null && !inPip) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(horizontal = 32.dp)
+                        .background(Color(0xE6141414), RoundedCornerShape(Radius.lg))
+                        .padding(horizontal = 24.dp, vertical = 20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Filled.Warning,
+                        contentDescription = null,
+                        tint = Coral,
+                        modifier = Modifier.size(40.dp)
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "Video tidak bisa diputar",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        err,
+                        color = Color(0xB3FFFFFF),
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        TextButton(
+                            onClick = {
+                                errorMsg = null
+                                retryKey += 1
+                            }
+                        ) {
+                            Text("Coba lagi", color = Coral, fontWeight = FontWeight.Bold)
+                        }
+                        TextButton(onClick = onBack) {
+                            Text("Tutup", color = Color(0xCCFFFFFF))
+                        }
+                    }
                 }
             }
 
